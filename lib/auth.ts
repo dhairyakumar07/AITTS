@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
-import db from "./db";
+import { get } from "./db";
 
 const secret = new TextEncoder().encode(process.env.SESSION_SECRET || "dev-only-change-me-aitts-session-secret");
 const COOKIE = "aitts_session";
@@ -38,6 +38,6 @@ export async function requireUser(role?: SessionUser["role"]) {
   return session;
 }
 
-export function getUserByEmail(email: string) {
-  return db.prepare("SELECT id,name,email,password_hash,role FROM users WHERE lower(email)=lower(?)").get(email) as any;
+export async function getUserByEmail(email: string) {
+  return await get("SELECT id,name,email,password_hash,role FROM users WHERE lower(email)=lower($1)", [email]);
 }
