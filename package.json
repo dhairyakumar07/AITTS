@@ -9,9 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@types/better-sqlite3": "^7.6.13",
     "bcryptjs": "^3.0.2",
-    "better-sqlite3": "^12.4.1",
     "jose": "^6.1.0",
     "lucide-react": "^0.468.0",
     "next": "^16.0.1",
