@@ -7,7 +7,10 @@ export async function GET() {
   const session = await getSession();
 
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
   }
 
   const rows = await all(
@@ -40,7 +43,10 @@ export async function POST(req: Request) {
   const session = await getSession();
 
   if (!session || session.role !== "ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 403 }
+    );
   }
 
   try {
@@ -66,11 +72,35 @@ export async function POST(req: Request) {
     const id = await transaction(async client => {
       const t = await client.query(
         `INSERT INTO tests(
-          title,description,subject,duration_minutes,total_marks,
-          access_code,status,start_time,end_time,allow_reattempt,
-          max_attempts,show_answer_key,created_by
+          title,
+          description,
+          subject,
+          duration_minutes,
+          total_marks,
+          access_code,
+          status,
+          start_time,
+          end_time,
+          allow_reattempt,
+          max_attempts,
+          show_answer_key,
+          created_by
         )
-        VALUES($1,$2,$3,$4,$5,$6,'PUBLISHED',$7,$8,$9,$10,$11,$12)
+        VALUES(
+          $1,
+          $2,
+          $3,
+          $4,
+          $5,
+          $6,
+          'PUBLISHED',
+          $7,
+          $8,
+          $9,
+          $10,
+          $11,
+          $12
+        )
         RETURNING id`,
         [
           body.title,
@@ -81,9 +111,15 @@ export async function POST(req: Request) {
           body.accessCode,
           body.startTime || null,
           body.endTime || null,
-          !!body.allowReattempt,
+
+          // PostgreSQL column is INTEGER, so use 1/0
+          body.allowReattempt ? 1 : 0,
+
           body.maxAttempts,
-          !!body.showAnswerKey,
+
+          // PostgreSQL column is INTEGER, so use 1/0
+          body.showAnswerKey ? 1 : 0,
+
           session.id,
         ]
       );
@@ -97,19 +133,27 @@ export async function POST(req: Request) {
           q.questionType === "SCQ" &&
           q.correctIndexes.length !== 1
         ) {
-          throw new Error("SCQ must have exactly one correct answer.");
+          throw new Error(
+            "SCQ must have exactly one correct answer."
+          );
         }
 
         if (
-          q.correctIndexes.some(i => i < 0 || i >= q.options.length)
+          q.correctIndexes.some(
+            i => i < 0 || i >= q.options.length
+          )
         ) {
           throw new Error("Invalid correct option.");
         }
 
         const qr = await client.query(
           `INSERT INTO questions(
-            test_id,question_text,question_type,marks,
-            negative_marks,sort_order
+            test_id,
+            question_text,
+            question_type,
+            marks,
+            negative_marks,
+            sort_order
           )
           VALUES($1,$2,$3,$4,$5,$6)
           RETURNING id`,
@@ -128,10 +172,18 @@ export async function POST(req: Request) {
 
         for (let oi = 0; oi < q.options.length; oi++) {
           const or = await client.query(
-            `INSERT INTO options(question_id,option_text,option_order)
-             VALUES($1,$2,$3)
-             RETURNING id`,
-            [questionId, q.options[oi], oi + 1]
+            `INSERT INTO options(
+              question_id,
+              option_text,
+              option_order
+            )
+            VALUES($1,$2,$3)
+            RETURNING id`,
+            [
+              questionId,
+              q.options[oi],
+              oi + 1,
+            ]
           );
 
           ids.push(Number(or.rows[0].id));
@@ -139,9 +191,15 @@ export async function POST(req: Request) {
 
         for (const index of q.correctIndexes) {
           await client.query(
-            `INSERT INTO correct_answers(question_id,option_id)
-             VALUES($1,$2)`,
-            [questionId, ids[index]]
+            `INSERT INTO correct_answers(
+              question_id,
+              option_id
+            )
+            VALUES($1,$2)`,
+            [
+              questionId,
+              ids[index],
+            ]
           );
         }
       }
@@ -149,10 +207,21 @@ export async function POST(req: Request) {
       return testId;
     });
 
-    return NextResponse.json({ ok: true, id });
+    return NextResponse.json({
+      ok: true,
+      id,
+    });
+
   } catch (e: any) {
+    console.error("CREATE TEST ERROR:", e);
+
     return NextResponse.json(
-      { error: e?.issues?.[0]?.message || e?.message || "Invalid test." },
+      {
+        error:
+          e?.issues?.[0]?.message ||
+          e?.message ||
+          "Invalid test.",
+      },
       { status: 400 }
     );
   }
