@@ -1,0 +1,14 @@
+"use client";
+import Link from "next/link";
+import { Suspense, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+
+function ResetForm() {
+  const params = useSearchParams(); const router = useRouter();
+  const token = params.get("token") || "";
+  const [password,setPassword]=useState(""); const [confirm,setConfirm]=useState(""); const [error,setError]=useState(""); const [done,setDone]=useState(false); const [loading,setLoading]=useState(false);
+  async function submit(e:React.FormEvent){e.preventDefault();setError("");if(password.length<8){setError("Password must be at least 8 characters.");return}if(password!==confirm){setError("Passwords do not match.");return}setLoading(true);try{const res=await fetch("/api/auth/reset-password",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token,password})});const d=await res.json();if(!res.ok)throw new Error(d.error||"Unable to reset password.");setDone(true);setTimeout(()=>router.push("/login"),1200)}catch(e:any){setError(e.message||"Unable to reset password.")}finally{setLoading(false)}}
+  if(!token) return <main className="auth-wrap"><div className="auth-card" style={{maxWidth:500,margin:"70px auto",textAlign:"center"}}><h1>Invalid reset link</h1><p className="muted">This password reset link is missing or invalid.</p><Link className="btn btn-primary" href="/forgot-password" style={{marginTop:20}}>Request a new link</Link></div></main>;
+  return <main className="auth-wrap"><div className="auth-card" style={{maxWidth:500,margin:"70px auto"}}><div className="auth-brand"><span className="brand-mark">A</span> AITTS</div><h1>Choose a new password</h1><p className="muted">Use at least 8 characters. This link can only be used once.</p>{error&&<div className="error" style={{marginTop:18}}>{error}</div>}{done&&<div className="success" style={{marginTop:18}}>Password updated. Redirecting to sign in…</div>}<form className="form" onSubmit={submit} style={{marginTop:24}}><div><label className="label">New password</label><input className="input" type="password" autoComplete="new-password" minLength={8} maxLength={128} value={password} onChange={e=>setPassword(e.target.value)} required/></div><div><label className="label">Confirm password</label><input className="input" type="password" autoComplete="new-password" minLength={8} maxLength={128} value={confirm} onChange={e=>setConfirm(e.target.value)} required/></div><button className="btn btn-primary" disabled={loading||done}>{loading?"Updating…":"Update password"}</button></form></div></main>;
+}
+export default function ResetPassword(){return <Suspense fallback={<main className="auth-wrap"><div className="auth-card" style={{maxWidth:500,margin:"70px auto",textAlign:"center"}}><p className="muted">Loading secure reset link…</p></div></main>}><ResetForm /></Suspense>}
