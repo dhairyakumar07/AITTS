@@ -1,16 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 function ResultsContent() {
+  const params = useSearchParams();
   const [results, setResults] = useState<any[]>([]);
-  const [selectedAttempt, setSelectedAttempt] = useState<string | null>(null);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    setSelectedAttempt(params.get("attempt"));
-
     fetch("/api/results")
       .then((r) => r.json())
       .then((d) => {
@@ -26,8 +24,10 @@ function ResultsContent() {
       });
   }, []);
 
+  const selected = params.get("attempt");
+
   const result = results.find(
-    (x) => String(x.attemptId) === selectedAttempt
+    (x) => String(x.attemptId) === selected
   );
 
   return (
@@ -44,7 +44,10 @@ function ResultsContent() {
       </div>
 
       {result && (
-        <div className="card" style={{ padding: 28, marginTop: 20 }}>
+        <div
+          className="card"
+          style={{ padding: 28, marginTop: 20 }}
+        >
           <div className="grid grid-4">
             <div className="stat">
               <div className="muted">Score</div>
@@ -62,18 +65,24 @@ function ResultsContent() {
 
             <div className="stat">
               <div className="muted">Correct</div>
-              <div className="num">{result.correct}</div>
+              <div className="num">
+                {result.correct}
+              </div>
             </div>
 
             <div className="stat">
               <div className="muted">Time</div>
               <div className="num">
-                {Math.floor(result.timeTakenSeconds / 60)}m
+                {Math.floor(
+                  result.timeTakenSeconds / 60
+                )}m
               </div>
             </div>
           </div>
 
-          <h2 style={{ marginTop: 20 }}>{result.title}</h2>
+          <h2 style={{ marginTop: 20 }}>
+            {result.title}
+          </h2>
 
           <div className="bar">
             <span
@@ -112,9 +121,13 @@ function ResultsContent() {
                 <td>
                   {x.score}/{x.totalMarks}
                 </td>
-                <td>{Math.round(x.percentage)}%</td>
                 <td>
-                  {new Date(x.submittedAt).toLocaleString()}
+                  {Math.round(x.percentage)}%
+                </td>
+                <td>
+                  {new Date(
+                    x.submittedAt
+                  ).toLocaleString()}
                 </td>
               </tr>
             ))}
@@ -126,5 +139,15 @@ function ResultsContent() {
 }
 
 export default function Results() {
-  return <ResultsContent />;
+  return (
+    <Suspense
+      fallback={
+        <main className="container main">
+          Loading results...
+        </main>
+      }
+    >
+      <ResultsContent />
+    </Suspense>
+  );
 }
